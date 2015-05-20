@@ -19,6 +19,7 @@ import javax.swing.JPanel;
 
 public class MoonLandingGame extends JPanel implements KeyListener {
 
+    double startTime = System.currentTimeMillis();
     int fuel = 600;
     int x = 0;
     int y = 0;
@@ -27,13 +28,22 @@ public class MoonLandingGame extends JPanel implements KeyListener {
     boolean first;
     boolean timerSet;
     boolean restart;
+    boolean jets;
     
     int randomNum = randInt(0, 580);
     
     private Image shipImg;
-    public void loadpict() {
-        shipImg = new ImageIcon("/obr/ship.png").getImage();
+    public void loadShip() {
+        shipImg = new ImageIcon("/Users/drofa/NetBeansProjects/GUI-MoonLanding/src/obr/ship.png").getImage();
     }
+    
+    public void loadJetShip() {
+        shipImg = new ImageIcon("/Users/drofa/NetBeansProjects/GUI-MoonLanding/src/obr/shipjets.png").getImage();
+    }    
+
+    public void loadCrash() {
+        shipImg = new ImageIcon("/Users/drofa/NetBeansProjects/GUI-MoonLanding/src/obr/crash.png").getImage();
+    }    
 
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -61,25 +71,32 @@ public class MoonLandingGame extends JPanel implements KeyListener {
         int ty = y;
 
         //raketa
-        loadpict();
         //g.setColor(Color.CYAN);
         Polygon ship = shipPolygon();
         tx = x + randomNum;
+        String collision = detectCollision(ship, ground, tx, ty);
+        //podminky prekreslovani rakety
+        if (jets == true && !collision.equals("landed")) {
+            loadJetShip();
+            jets = false;
+        } else if (collision.equals("crashed")) {
+            loadCrash();
+            tx = tx - 35;
+            ty = ty - 40;
+        } else {
+            loadShip();
+        }
         g.drawImage(shipImg, tx, ty, null);
         g.translate(tx, ty);
         //g.fillPolygon(ship);  //vybarveni polygonu lodi
         g.translate(0 - tx, 0 - ty);
 
         //detekce kolize/pristani
-        String collision = detectCollision(ship, ground, tx, ty);
         if (collision.equals("crashed")) {
             crashed(g, tx);
         } else if (collision.equals("landed")) {
             landed(g);
         }
-        
-        //vykresleni ohne
-        //TODO
 
         //novy thread
         if (!timerSet) {
@@ -93,24 +110,26 @@ public class MoonLandingGame extends JPanel implements KeyListener {
         if (fuel > 300) {
             g.setColor(Color.GREEN);
         } else if (fuel > 240) {
-            g.setColor(Color.yellow);
+            g.setColor(Color.YELLOW);
         } else if (fuel > 150) {
-            g.setColor(Color.orange);
+            g.setColor(Color.ORANGE);
         } else {
-            g.setColor(Color.red);
+            g.setColor(Color.RED);
         }
         g.fillRect(580, 600 - (int) (fuel / 2), 20, (int) fuel / 2);
     }
 
     private void landed(Graphics g) {
+        double estimatedTime = System.currentTimeMillis() - startTime;
         g.setColor(Color.GREEN);
         g.drawString("Úspěšné přistání, stiskněte 'R' pro nový let", 162, 210);
+        g.drawString("Váš let trval: " + estimatedTime/1000 + "s", 162, 225);
     }
 
     private void crashed(Graphics g, int tx) {
         g.setColor(Color.RED);
         g.drawString("Havárie, stiskněte 'R' po nový let", 192, 210);
-        g.fillArc(tx - 35 , y + 50 , 110, 50, 0, 360);
+        //g.fillArc(tx - 35 , y + 50 , 110, 50, 0, 360); //exploze polygon
     }
 
     /**
@@ -159,8 +178,8 @@ public class MoonLandingGame extends JPanel implements KeyListener {
     }
 
     public Polygon shipPolygon() {
-        int[] shipXS = {0, 40, 40, 0};
-        int[] shipYS = {0, 0, 65, 65};
+        int[] shipXS = {0, 48, 48, 0};
+        int[] shipYS = {0, 0, 68, 68};
         return new Polygon(shipXS, shipYS, shipXS.length);
     }
 
@@ -207,11 +226,15 @@ public class MoonLandingGame extends JPanel implements KeyListener {
             fuel -= 2;
         } else if (code == KeyEvent.VK_UP || code == KeyEvent.VK_KP_UP || code == KeyEvent.VK_SPACE) {	//thruster
             fuel -= 10;
+            if (fuel > 0) {
+                jets = true;
+            }
             if (gravityShift > 5 && fuel > 0) {
                 gravityShift = gravityShift * 0.85;
             }
         } else if (code == KeyEvent.VK_R) {   //restart
             restart = true;
+            startTime = System.currentTimeMillis(); //restart casovace
             System.out.println("Nová hra");
             x = 0;
             y = 0;
